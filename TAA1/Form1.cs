@@ -15,6 +15,13 @@ namespace TAA1
     {
         string myConStr;
         string mySqlStm;
+        string mInputTable;
+        List<string> mInputTables;
+        string mSumTable;
+        string mDetTable;
+        string mSumTableLst;
+        string mDetTableLst;
+
         string IncidentId;
         string IncidentSource;
         string Description;
@@ -23,7 +30,7 @@ namespace TAA1
         int mTotalFields;
         int mCurrentRecord;
         int mCurrentDetailRec;
-        Regex rgx = new Regex("[^a-zA-Z0-9 -']");
+        Regex rgx = new Regex("[^a-zA-Z0-9 ]");
         List<string> stopWord;
         bool stopWordTableFlag;
         string newStopWord;
@@ -39,14 +46,14 @@ namespace TAA1
             msgBox.Text = s1;
             using (StreamWriter sw = new StreamWriter("c:\\temp\\taa_log.txt"))
             {
-                sw.WriteLine(s1);sw.Close();sw.Dispose();
+                sw.WriteLine(s1); sw.Close(); sw.Dispose();
             }
-            
+
         }
 
         private void setSystemMessage2(string s)
         {
-            msgBox2.Text = s; 
+            msgBox2.Text = s;
         }
 
         private void makeConnString()
@@ -55,7 +62,7 @@ namespace TAA1
             myConStr += ";Initial Catalog=" + tbDBCatalog.Text;
             myConStr += ";User id=" + tbDBUsername.Text;
             myConStr += ";Password=" + tbDBPassword.Text;
-           myConStr += ";MultipleActiveResultSets=true";
+            myConStr += ";MultipleActiveResultSets=true";
         }
 
         private void setAllFieldsSelectedIndex(int n)
@@ -66,6 +73,125 @@ namespace TAA1
             }
         }
 
+        public int totalInputRecords(string InputTableName)
+        {
+            using (SqlConnection conn = new SqlConnection())
+            {
+                int mTotalRecords;
+                conn.ConnectionString = myConStr;
+                conn.Open();
+                mySqlStm = "SELECT count(*) as TCOUNT from [" + InputTableName + "]";
+                SqlCommand command = new SqlCommand(mySqlStm, conn); ;
+                using (SqlDataReader reader = command.ExecuteReader())
+                {
+                    if (reader.Read())
+                    {
+                        mTotalRecords = int.Parse(reader[0].ToString());
+                        setSystemMessage("Total Records In Input file=" + mTotalRecords.ToString());
+                        progressBar.Maximum = mTotalRecords;
+                        progressBar.Value = 0;
+                        tbInputRecords.Text = mTotalRecords.ToString();
+                        tbInputRecords.Update();
+                    }
+                    else
+                        mTotalRecords = 0;
+                }
+            }
+
+            return mTotalRecords;
+        }
+
+        void createDetailTable(string TableName)
+        {
+            using (SqlConnection conn = new SqlConnection())
+            {
+                conn.ConnectionString = myConStr;
+                conn.Open();
+                mySqlStm = "create table [" + tbDetTable.Text
+                        + "] (IncidentNo char(50), IncidentSource char(50), Word char(50), Count int);";
+                using (SqlCommand command = new SqlCommand(mySqlStm, conn))
+                {
+                    command.ExecuteNonQuery();
+                }
+                setSystemMessage("Created Detail table!" + tbDetTable.Text);
+            }
+        }
+
+        public void createReadStopWordTable()
+        {
+            using (SqlConnection conn = new SqlConnection())
+            {
+                conn.ConnectionString = myConStr;
+                conn.Open();
+                stopWord = new List<string>();
+                if (stopWordTableFlag)  // this flag was set during fill tables.
+                {
+                    setSystemMessage("The stopwords table already exists! Start reading from table.");
+                    mySqlStm = "SELECT word from stopwords";
+                    using (SqlCommand command = new SqlCommand(mySqlStm, conn))
+                    {
+                        using (SqlDataReader reader = command.ExecuteReader())
+                        {
+                            while (reader.Read())
+                            {
+                                stopWord.Add(reader[0].ToString());
+                                setSystemMessage("Read from Stop Word Table word:" + reader[0].ToString());
+                            }
+                        }
+                        setSystemMessage("Completed reading from stop word table.");
+                    }
+                }
+                else
+                {
+                    mySqlStm = "create table [stopwords] (Word char(50));";
+                    using (SqlCommand command = new SqlCommand(mySqlStm, conn))
+                    {
+                        command.ExecuteNonQuery();
+                    }
+                    setSystemMessage("Created stopwords table! As it was not existing in database");
+                }
+            }
+        }
+
+        public void readNewStopWordFile()
+        {
+            using (SqlConnection conn = new SqlConnection())
+            {
+                conn.ConnectionString = myConStr;
+                conn.Open();
+                if (File.Exists(tbStopWords.Text))
+                {
+                    if (stopWord.Count == 0) stopWord.Add("");
+                    using (StreamReader sr2 = new StreamReader(tbStopWords.Text))
+                    {
+                        while (sr2.Peek() > 0)
+                        {
+                            newStopWord = sr2.ReadLine().Trim().ToLower();
+                            newStopWord = rgx.Replace(newStopWord, "");
+                            bool found = stopWord.Contains(newStopWord);
+                            if (found)
+                            {
+                                setSystemMessage("Stop Word from file already Exists: " + newStopWord);
+                            }
+                            else
+                            {
+                                stopWord.Add(newStopWord);
+                                mySqlStm = "insert into stopwords values('" + newStopWord + "');";
+                                using (SqlCommand command = new SqlCommand(mySqlStm, conn))
+                                {
+                                    command.ExecuteNonQuery();
+                                }
+                            }  // End else                                 
+                        }   // end while loop
+                    }  // end steam reader
+                    setSystemMessage("Stop Word File loading completed...");
+                } // end if stopword file exists
+                else
+                {
+                    setSystemMessage("Stop Word File not found skipping load of file...");
+                }
+            } // Closing SQL Connection conn
+        }
 
         public string removeLineEndings(string value)
         {
@@ -78,6 +204,154 @@ namespace TAA1
 
             return value.Replace("\r\n", " ").Replace("\n", " ").Replace("\"", " ").Replace("\'", " ").Replace("\r", " ").Replace(lineSeparator, " ").Replace(paragraphSeparator, " ");
         }
+
+        void createSelectQueryStatement()
+        {
+            mySqlStm = "SELECT ";
+            mySqlStm += "[" + tbTktNoField.Text + "]";
+            mySqlStm += ",[" + tbTktSrcField.Text + "]";
+            mTotalFields = 2 + lbxTextFields.Items.Count;
+
+            for (int i = 0; i < lbxTextFields.Items.Count; i++)
+                mySqlStm += ",[" + lbxTextFields.Items[i].ToString() + "]";
+            mySqlStm += " from " + cmbInputTable.Text;
+
+            setSystemMessage("Created SQL Stm: " + mySqlStm + "\n" + msgBox.Text);
+        }
+
+        public void processDescription(string IncidentID, string IncidentSource, string Description)
+        {
+            Description = removeLineEndings(Description);
+            Description = rgx.Replace(Description, " ");
+
+            // Program to split the words of Description by space
+            var desWords = Description.Split(' ');
+
+            // Program to fetch 
+
+
+
+
+
+
+            // Program to sort the words found in description
+            Array.Sort<string>(desWords);
+
+            // Proram to process the Description and count the words and store
+            string newDesWord = "";
+            searchWord = tbOptSearchString.Text;
+            int newDesWordCnt = 1;
+            for (int i = 0; i < desWords.Length; i++)
+            {
+                // convert the description word to lower
+                desWords[i] = desWords[i].ToLower();
+                if (desWords[i].Length >= 50)
+                    desWords[i] = desWords[i].Substring(1, 49);
+
+                // Program to skip the words if the word are in stop words array
+                if (stopWord.Contains(desWords[i])) continue;
+
+                // Program to skip the words if the word does not match searchWord
+                if (searchWord != "") if (!(desWords[i].IndexOf(searchWord) >= 0)) continue;
+
+                // Program to parse through the sorted list of description words and write when the words change with count.
+                if (desWords[i] == newDesWord)
+                    newDesWordCnt++;
+                else
+                {
+                    // Program to insert the record in the detail table
+                    // sw.WriteLine(IncidentId + ',' + IncidentSource + ',' + desWords[i] + ',' + newDesWordCnt.ToString());
+                    // TODO
+
+                    mySqlStm = "insert into [" + tbDetTable.Text
+                        + "] values('" + IncidentId
+                        + "','" + IncidentSource
+                        + "','" + desWords[i]
+                        + "'," + newDesWordCnt.ToString()
+                        + ");";
+                    using (SqlConnection conn = new SqlConnection())
+                    {
+                        conn.ConnectionString = myConStr;
+                        conn.Open();
+                        using (SqlCommand command2 = new SqlCommand(mySqlStm, conn))
+                        {
+                            command2.ExecuteNonQuery();
+                        }
+                    }
+
+                    newDesWord = desWords[i];
+                    newDesWordCnt = 1;
+                    // Incrementing the output file record counter by 1
+                    tbOutputRecords.Text = mCurrentDetailRec.ToString();
+                    tbOutputRecords.Update();
+                    mCurrentDetailRec++;
+
+                }
+            }
+        }
+        public void processInputRecords()
+        {
+            using (SqlConnection conn = new SqlConnection())
+            {
+                conn.ConnectionString = myConStr;
+                conn.Open();
+                createSelectQueryStatement();
+                using (SqlCommand command = new SqlCommand(mySqlStm, conn))
+                {
+                    // Open the loop to read each record of SQL command query output
+                    using (SqlDataReader reader = command.ExecuteReader())
+                    {
+
+                        mCurrentRecord = 1;
+                        mCurrentDetailRec = 1;
+                        while (reader.Read())
+                        {
+                            // The code to read IncidentID, IncidentSource, Text Fields from the read record.
+                            IncidentId = reader[0].ToString();
+                            IncidentSource = reader[1].ToString();
+                            Description = "";
+                            for (int i = 2; i < mTotalFields; i++)
+                            {
+                                Description += " " + reader[i].ToString();
+                            }
+
+                            processDescription(IncidentId, IncidentSource, Description);
+
+                            // Incrementing the input file record counter by 1
+                            setSystemMessage("Record: " + mCurrentRecord.ToString() + " Word Count Processed...");
+                            progressBar.Value = mCurrentRecord;
+                            tbCurrRecord.Text = mCurrentRecord.ToString();
+                            tbCurrRecord.Update();
+                            mCurrentRecord++;
+
+                        }
+                    } // Closing of SQL Data Reader reader
+
+                }
+            }
+        }
+
+        public void createSummaryTable()
+        {
+            using (SqlConnection conn = new SqlConnection())
+            {
+                conn.ConnectionString = myConStr;
+                conn.Open();
+
+                // mySqlStm = "create table [" + tbSumTable.Text + "] (Word char(50), Incidents int);";
+                mySqlStm = "select Word, IncidentSource, count(*) as [IncidentCount] ";
+                mySqlStm += "into [" + tbSumTable.Text + "] ";
+                mySqlStm += "from [" + tbDetTable.Text + "] ";
+                mySqlStm += "group by Word, IncidentSource ";
+                mySqlStm += "order by IncidentCount Desc";
+
+                using (SqlCommand command2 = new SqlCommand(mySqlStm, conn))
+                {
+                    command2.ExecuteNonQuery();
+                }
+                setSystemMessage("Created Summary table!" + tbSumTable.Text);
+            }
+        }
         private void fillTables()
         {
             // Clear the combo box first
@@ -87,8 +361,6 @@ namespace TAA1
             using (SqlConnection conn = new SqlConnection())
             {
                 // Set the connection String
-                try
-                {
                     makeConnString();
                     conn.ConnectionString = myConStr;
                     conn.Open();
@@ -113,11 +385,6 @@ namespace TAA1
                             }
                         }
                     }
-                }
-                catch (SqlException)
-                {
-                    setSystemMessage("SQL Exceltion: Could not fetch tables from the database.");
-                }
             }
         }
 
@@ -132,11 +399,11 @@ namespace TAA1
             tbStopWords.Text = "C:\\Temp\\stopword.txt";
 
 
-            var appSettings= ConfigurationManager.AppSettings;
-            tbDBSource.Text = appSettings["DataSource"]; 
-            tbDBCatalog.Text = appSettings["InitialCatalog"];
-            tbDBUsername.Text = appSettings["Username"];
-            tbDBPassword.Text = "";
+            // var appSettings= ConfigurationManager.AppSettings;
+            tbDBSource.Text = ConfigurationManager.AppSettings["DataSource"];
+            tbDBCatalog.Text = ConfigurationManager.AppSettings["InitialCatalog"];
+            tbDBUsername.Text = ConfigurationManager.AppSettings["Username"];
+            tbDBPassword.Text = ConfigurationManager.AppSettings["Password"]; ;
             setSystemMessage("Thank you for using HPE MWS Text Analysis Tool.");
             setSystemMessage2("Step 1: Please click on the connect button to connect to the database.");
             //fillTables();
@@ -157,40 +424,40 @@ namespace TAA1
             using (SqlConnection conn = new SqlConnection())
             {
                 // Open the connection
-                    makeConnString();
-                    conn.ConnectionString = myConStr;
-                    conn.Open();
+                makeConnString();
+                conn.ConnectionString = myConStr;
+                try { conn.Open(); } catch (Exception) { }
 
-                    if (conn != null && conn.State == ConnectionState.Open)
-                    {
+                if (conn != null && conn.State == ConnectionState.Open)
+                {
 
-                        lblConnState.Text = "Connected!";
-                        lblConnState.BackColor = Color.LightGreen;
-                        gbTableSelection.Visible = true;
+                    lblConnState.Text = "Connected!";
+                    lblConnState.BackColor = Color.LightGreen;
+                    gbTableSelection.Visible = true;
 
-                        // Disable the Database Selection controls
-                        btnDBConnect.Enabled = false;
-                        tbDBSource.ReadOnly = true;
-                        tbDBCatalog.ReadOnly = true;
-                        tbDBUsername.ReadOnly = true;
-                        tbDBPassword.ReadOnly = true;
+                    // Disable the Database Selection controls
+                    btnDBConnect.Enabled = false;
+                    tbDBSource.ReadOnly = true;
+                    tbDBCatalog.ReadOnly = true;
+                    tbDBUsername.ReadOnly = true;
+                    tbDBPassword.ReadOnly = true;
 
-                        fillTables();
-                        setSystemMessage("Database Connected!");
-                        setSystemMessage2("Step 2: Select the Input Table from the Drop Down");
-                    }
-                    else
-                    {
-                        lblConnState.Text = "Not Connected!";
-                        lblConnState.BackColor = Color.Pink;
-                        setSystemMessage2("Step 1a: Please check database source, catalog, username and password and reconnect.");
-                    }
+                    fillTables();
+                    setSystemMessage("Database Connected!");
+                    setSystemMessage2("Step 2: Select the Input Table from the Drop Down");
+                }
+                else
+                {
+                    lblConnState.Text = "Not Connected!";
+                    lblConnState.BackColor = Color.Pink;
+                    setSystemMessage2("Step 1a: Please check database source, catalog, username and password and reconnect.");
+                }
             }
         }
 
         private void cmbInputTable_SelectedIndexChanged(object sender, EventArgs e)
         {
-            setSystemMessage("Input table "+ cmbInputTable.Text +" selected.");
+            setSystemMessage("Input table " + cmbInputTable.Text + " selected.");
             gbFieldSelection.Visible = true;
 
             // disable table selection controls
@@ -205,57 +472,51 @@ namespace TAA1
 
             // Program to check if the file name already exists in the tables list.
             bool fileNameSet = false;   // Flag to check if file name set
+            mInputTable = cmbInputTable.Text;
+            mSumTable = "";
+            mDetTable = "";
+            mSumTableLst = "";
+            mDetTableLst = "";
 
-            List<string> mInputTables;
-            string mInputTable = cmbInputTable.Text;
-            string mSumTable = "";
-            string mDetTable = "";
             mInputTables = new List<string>();
 
             // Start the SQL Connection Object Loop
             using (SqlConnection conn = new SqlConnection())
             {
-                try
+                makeConnString();
+                conn.ConnectionString = myConStr;
+                conn.Open();
+                mySqlStm = "SELECT TABLE_NAME FROM information_schema.tables WHERE TABLE_TYPE=\'BASE TABLE\' and TABLE_CATALOG=\'test\';";
+                using (SqlCommand command = new SqlCommand(mySqlStm, conn))
                 {
-                    makeConnString();
-                    conn.ConnectionString = myConStr;
-                    conn.Open();
-                    mySqlStm = "SELECT TABLE_NAME FROM information_schema.tables WHERE TABLE_TYPE=\'BASE TABLE\' and TABLE_CATALOG=\'test\';";
-                    using (SqlCommand command = new SqlCommand(mySqlStm, conn))
+                    // Open the loop to read each record of SQL command query output
+                    using (SqlDataReader reader = command.ExecuteReader())
                     {
-                        // Open the loop to read each record of SQL command query output
-                        using (SqlDataReader reader = command.ExecuteReader())
+                        while (reader.Read())
                         {
-                            while (reader.Read())
-                            {
-                                mInputTables.Add(reader[0].ToString());
-                            }
-                        } // Close SqlDataReader reader
-                    }
-
-
-                    // Program to Clear the list box first
-                    lbxAllFields.Items.Clear();
-                    // Program to populate the list box of tables
-
-                    mySqlStm = "SELECT * FROM [" + mInputTable + "] WHERE 1=2;";
-                    using (SqlCommand command = new SqlCommand(mySqlStm, conn))
-                    {
-
-                        using (SqlDataReader reader = command.ExecuteReader())
-                        {
-                            var tableSchema = reader.GetSchemaTable();
-                            foreach (DataRow row in tableSchema.Rows)
-                            {
-                                // add to the list box
-                                lbxAllFields.Items.Add(row["ColumnName"]);
-                            }
-                        } // Close SqlDataReader reader
-                    }
+                            mInputTables.Add(reader[0].ToString());
+                        }
+                    } // Close SqlDataReader reader
                 }
-                catch (SqlException)
+
+
+                // Program to Clear the list box first
+                lbxAllFields.Items.Clear();
+                // Program to populate the list box of tables
+
+                mySqlStm = "SELECT * FROM [" + mInputTable + "] WHERE 1=2;";
+                using (SqlCommand command = new SqlCommand(mySqlStm, conn))
                 {
-                    setSystemMessage("SQL Exception: Unable to connect to database to check the tables");
+
+                    using (SqlDataReader reader = command.ExecuteReader())
+                    {
+                        var tableSchema = reader.GetSchemaTable();
+                        foreach (DataRow row in tableSchema.Rows)
+                        {
+                            // add to the list box
+                            lbxAllFields.Items.Add(row["ColumnName"]);
+                        }
+                    } // Close SqlDataReader reader
                 }
             }    // Close SqlConnection conn
 
@@ -267,6 +528,8 @@ namespace TAA1
                 mDetTable = mInputTable + "_det_" + mcounter.ToString();
                 if (mInputTables.Contains(mSumTable) || mInputTables.Contains(mDetTable))
                 {
+                    mSumTableLst = mSumTable;
+                    mDetTableLst = mDetTable;
                     mcounter++;
                 }
                 else
@@ -284,19 +547,19 @@ namespace TAA1
         {
             fillTables();
         }
-        
+
         private void btnTktNoSelect_Click(object sender, EventArgs e)
         {
             // Program to check if item is selected and move the same to Ticket No Field.
-            if (lbxAllFields.SelectedItems.Count!=1)
+            if (lbxAllFields.SelectedItems.Count != 1)
             {
                 MessageBoxButtons mButtons = MessageBoxButtons.OK;
-                MessageBox.Show ("Please select a field.","Message: Nothing Selected!",mButtons);
+                MessageBox.Show("Please select a field.", "Message: Nothing Selected!", mButtons);
                 setSystemMessage("Ticket Number Field select button pressed with no selection!");
             }
             else
             {
-                if (tbTktNoField.Text!="")
+                if (tbTktNoField.Text != "")
                 {
                     lbxAllFields.Items.Add(tbTktNoField.Text);
                     setSystemMessage("Unselected Ticket No Field: [" + tbTktNoField.Text + "]");
@@ -311,7 +574,7 @@ namespace TAA1
 
         private void btnTktNoUnSelect_Click(object sender, EventArgs e)
         {
-            if(tbTktNoField.Text=="")
+            if (tbTktNoField.Text == "")
             {
                 MessageBoxButtons mButtons = MessageBoxButtons.OK;
                 MessageBox.Show("Noting to Unselect", "Message:", mButtons);
@@ -340,7 +603,7 @@ namespace TAA1
                 if (tbTktSrcField.Text != "")
                 {
                     lbxAllFields.Items.Add(tbTktSrcField.Text);
-                    setSystemMessage("Unselected Ticket Source Field: " + tbTktSrcField.Text +"]");
+                    setSystemMessage("Unselected Ticket Source Field: " + tbTktSrcField.Text + "]");
                 }
                 tbTktSrcField.Text = lbxAllFields.SelectedItem.ToString();
                 lbxAllFields.Items.RemoveAt(lbxAllFields.SelectedIndex);
@@ -365,7 +628,7 @@ namespace TAA1
                 tbTktSrcField.Text = "";
                 setSystemMessage("Unselected Ticket Source Field: " + tbTktSrcField.Text + "]");
                 setSystemMessage2("Step 4: Please select the Ticket Source Field.");
-             }
+            }
         }
 
         private void btnTextFieldsSFSelect_Click(object sender, EventArgs e)
@@ -414,10 +677,10 @@ namespace TAA1
 
         private void btnTextFieldsMFSelect_Click(object sender, EventArgs e)
         {
-            if(tbTktNoField.Text=="" || tbTktSrcField.Text=="")
+            if (tbTktNoField.Text == "" || tbTktSrcField.Text == "")
             {
-                MessageBoxButtons mbotton=MessageBoxButtons.OK;
-                MessageBox.Show("Please Choose Both Ticket Number and Ticket Source \nBefore Selecting Remaining Text Fields.","Message:",mbotton);
+                MessageBoxButtons mbotton = MessageBoxButtons.OK;
+                MessageBox.Show("Please Choose Both Ticket Number and Ticket Source \nBefore Selecting Remaining Text Fields.", "Message:", mbotton);
             }
             else
             {
@@ -432,7 +695,7 @@ namespace TAA1
 
         private void btnTextFieldsMFUnselect_Click(object sender, EventArgs e)
         {
-            if(lbxTextFields.Items.Count>0)
+            if (lbxTextFields.Items.Count > 0)
             {
                 for (int i = 0; i < lbxTextFields.Items.Count; i++)
                 {
@@ -468,329 +731,115 @@ namespace TAA1
         private void btnProcess_Click(object sender, EventArgs e)
         {
             // Initialize the progress bar.
+            btnClose.Enabled = false;
+            btnProcess.Enabled = false;
             progressBar.Visible = true;
             progressBar.Minimum = 0;
             progressBar.Value = 0;
             progressBar.Maximum = 100;
+            makeConnString();
 
-            // Open the connection to the dataase 
+            //-------------------------------------------
+            //--- 01 Program to find the number of records 
+            //-------------------------------------------
+            mTotalRecords = totalInputRecords(cmbInputTable.Text);
 
+
+            //-------------------------------------------
+            //--- 02 Program to create the detail table.
+            //-------------------------------------------
+            createDetailTable(tbDetTable.Text);
+
+
+            //-------------------------------------------
+            //--- 03 Program to load stopword table if exist into the array else create.
+            //-------------------------------------------
+            createReadStopWordTable();
+
+            //-------------------------------------------
+            //--- 04 Program to check if the stopword file specified has new words add to the list.
+            //-------------------------------------------
+            readNewStopWordFile();
+
+
+            //------------------------------------------------------------------------------------
+            //--- 05 Program to fetch the records and process word count to populate details table.
+            //------------------------------------------------------------------------------------
+            processInputRecords();
+
+
+            //------------------------------------------------------------------------------------
+            //--- 06 Program to create the summary table.
+            //------------------------------------------------------------------------------------
+            createSummaryTable();
+
+            setSystemMessage("Done!");
+            
+            btnClose.Enabled = true;
+            mySqlStm = "SELECT Word, IncidentSource, IncidentCount from [" + tbSumTable.Text + "]";
+            mySqlStm += " order by IncidentCount DESC";
+
+            Form2 f2 = new Form2(mySqlStm, myConStr, mInputTable, mSumTable, mDetTable);
+            f2.Show();
+    } // Closing of btnProcess_Click procedure
+
+    private void tbDBSource_TextChanged(object sender, EventArgs e)
+    {
+        makeConnString();
+    }
+
+    private void loadCSV_Click(object sender, EventArgs e)
+    {
+        using (StreamReader sr = new StreamReader("C:\\Users\\sisumank\\Documents\\Share_Mothi\\apr16_pipe.csv"))
+        {
             using (SqlConnection conn = new SqlConnection())
             {
+                myConStr = "Data Source=SISUMANK1\\SUMANDB";
+                myConStr += ";Initial Catalog=test";
+                myConStr += ";User id=sa";
+                myConStr += ";Password=S1u2m3a4n5";
+                myConStr += ";MultipleActiveResultSets=true";
 
-                //-------------------------------------------
-                //--- 01 Program to find the number of records 
-                //-------------------------------------------
-                try
+                conn.ConnectionString = myConStr;
+                conn.Open();
+                int mrowcount = 0;
+                setSystemMessage("Start :" + mrowcount.ToString());
+                while (sr.Peek() > 0)
                 {
-                    makeConnString();
-                    conn.ConnectionString = myConStr;
-                    conn.Open();
-                    mySqlStm = "SELECT count(*) as TCOUNT from [" + cmbInputTable.Text + "]";
-                    SqlCommand command = new SqlCommand(mySqlStm, conn); ;
+                    string mline = sr.ReadLine();
 
-                    using (SqlDataReader reader = command.ExecuteReader())
+                    if (mrowcount >= 60000)
                     {
-                        if (reader.Read())
-                        {
-                            mTotalRecords = int.Parse(reader[0].ToString());
-                            setSystemMessage("Total Records In Input file=" + mTotalRecords.ToString());
-                            progressBar.Maximum = mTotalRecords;
-                            progressBar.Value = 0;
-                            tbInputRecords.Text = mTotalRecords.ToString();
-                            tbInputRecords.Update();
-                        }
-                    }
-                }
-                catch (SqlException)
-                {
-                    setSystemMessage("SQL Exception: Could not calculate total input records");
-                }
-
-
-
-
-                //-------------------------------------------
-                //--- 02 Program to create the detail table.
-                //-------------------------------------------
-                try
-                {
-                    mySqlStm = "create table [" + tbDetTable.Text
-                        + "] (IncidentNo char(50), IncidentSource char(50), Word char(50), Count int);";
-                    SqlCommand command = new SqlCommand(mySqlStm, conn);
-                    command.ExecuteNonQuery();
-                    setSystemMessage("Created Detail table!" + tbDetTable);
-                }
-                catch (SqlException)
-                {
-                    setSystemMessage("SQL Exception: Could not create Detail table!" + tbDetTable);
-                }
-
-
-
-                //-------------------------------------------
-                //--- 04 Program to load stopword table if exist into the array else create.
-                //-------------------------------------------
-                stopWord = new List<string>();
-                if (stopWordTableFlag)  // this flag was set during fill tables.
-                {
-                    setSystemMessage("The stopwords table already exists! Start reading from table.");
-                    try
-                    {
-                        mySqlStm = "SELECT words from stopwords";
-                        using (SqlCommand command = new SqlCommand(mySqlStm, conn))
-                        {
-                            using (SqlDataReader reader = command.ExecuteReader())
-                            {
-                                while (reader.Read())
-                                {
-                                    stopWord.Add(reader[0].ToString());
-                                    setSystemMessage("Read from Stop Word Table word:" + reader[0].ToString());
-                                }
-                            }
-                            setSystemMessage("Completed reading from stop word table.");
-                        }
-                    }
-                    catch (SqlException)
-                    {
-                        setSystemMessage("SQL Exception: Could not load stop words from stopwords table");
-                    }
-                }
-                else
-                {
-                    try
-                    {
-                        mySqlStm = "create table [stopwords] (Word char(50));";
+                        string[] mfields = mline.Split('|');
+                        mySqlStm = "insert into input values('";
+                        mySqlStm += mfields[0].Replace("\'", " ").Replace("\"", " ") + "','";
+                        mySqlStm += mfields[1].Replace("\'", " ").Replace("\"", " ") + "','";
+                        mySqlStm += mfields[2].Replace("\'", " ").Replace("\"", " ") + "','";
+                        mySqlStm += mfields[3].Replace("\'", " ").Replace("\"", " ") + "','";
+                        mySqlStm += mfields[4].Replace("\'", " ").Replace("\"", " ") + "','";
+                        mySqlStm += mfields[5].Replace("\'", " ").Replace("\"", " ") + "')";
                         using (SqlCommand command = new SqlCommand(mySqlStm, conn))
                         {
                             command.ExecuteNonQuery();
                         }
-                        setSystemMessage("Created stopwords table!");
                     }
-                    catch (SqlException)
-                    {
-                        setSystemMessage("SQL Exception: Could not create stopwords table!");
-                    }
-                }
+                    setSystemMessage("Inserted :" + mrowcount.ToString());
+                    if (mrowcount == 100000) break;
+                    mrowcount++;
+                }  // while loop ends
+                setSystemMessage("End :" + mrowcount.ToString());
+            }  // sql connection end
+        } // stream reader end
+    }  //load csv end 
 
-                //-------------------------------------------
-                //--- 05 Program to check if the stopword file specified has new words add to the list.
-                //-------------------------------------------
-                if (File.Exists(tbStopWords.Text))
-                {
-                    if (stopWord.Count == 0) stopWord.Add("");
-                    using (StreamReader sr2 = new StreamReader(tbStopWords.Text))
-                    {
-                        while (sr2.Peek() > 0)
-                        {
-                            newStopWord = sr2.ReadLine().Trim().ToLower();
-                            if (stopWord.Contains(newStopWord))
-                            {
-                                setSystemMessage("Stop Word from file already Exists: " + newStopWord);
-                            }
-                            else
-                            {
-                                try
-                                {
-                                    stopWord.Add(newStopWord);
-                                    mySqlStm = "insert into stopwords values('" + newStopWord + "');";
+    private void button1_Click(object sender, EventArgs e)
+    {
+        mySqlStm = "SELECT Word, IncidentSource, IncidentCount from [" + mSumTableLst + "]";
+        mySqlStm += " order by IncidentCount DESC";
 
-                                    using (SqlCommand command = new SqlCommand(mySqlStm, conn))
-                                    {
-                                        command.ExecuteNonQuery();
-                                    }
-                                }
-                                catch (SqlException)
-                                {
-                                    setSystemMessage("SQL Exception: Could not add to table new stop word:" + newStopWord);
-                                }
-                            }  // End else                                 
-                        }   // end while loop
-                    }  // end steam reader
-                    setSystemMessage("Stop Word File loading completed...");
-                } // end if stopword file exists
-                else
-                {
-                    setSystemMessage("Stop Word File not found skipping load of file...");
-                }
-            } // Closing SQL Connection conn
+        Form2 f2 = new Form2(mySqlStm, myConStr, mInputTable, mSumTableLst, mDetTableLst);
+        f2.Show();
+    }
 
-
-            using (SqlConnection conn = new SqlConnection())
-            {
-                makeConnString();
-                conn.ConnectionString = myConStr;
-                conn.Open();
-
-                //--- 06 Program to fetch the records and process word count to populate details table.
-
-                mySqlStm = "SELECT ";
-                mySqlStm += "[" + tbTktNoField.Text + "]";
-                mySqlStm += ",[" + tbTktSrcField.Text + "]";
-                mTotalFields = 2 + lbxTextFields.Items.Count;
-
-                for (int i = 0; i < lbxTextFields.Items.Count; i++)
-                    mySqlStm += ",[" + lbxTextFields.Items[i].ToString() + "]";
-                mySqlStm += " from " + cmbInputTable.Text;
-
-                setSystemMessage("Created SQL Stm: "+ mySqlStm + "\n" + msgBox.Text);
-                using (SqlCommand command = new SqlCommand(mySqlStm, conn))
-                {
-                    // Open the loop to read each record of SQL command query output
-                    using (SqlDataReader reader = command.ExecuteReader())
-                    {
-
-                        mCurrentRecord = 1;
-                        mCurrentDetailRec = 1;
-                        while (reader.Read())
-                        {
-                            // The code to process each record.
-                            IncidentId = reader[0].ToString();
-                            IncidentSource = reader[1].ToString();
-                            Description = "";
-                            for (int i = 2; i < mTotalFields; i++)
-                            { Description += " "+reader[i].ToString(); }
-
-                            Description = removeLineEndings(Description);
-                            Description = rgx.Replace(Description, " ");
-
-                            // Program to split the words of Description by space
-                            var desWords = Description.Split(' ');
-
-                            // Program to sort the words found in description
-                            Array.Sort<string>(desWords);
-
-                            // Proram to process the Description and count the words and store
-                            string newDesWord = "";
-                            searchWord = tbOptSearchString.Text;
-                            int newDesWordCnt = 1;
-                            for (int i = 0; i < desWords.Length; i++)
-                            {
-                                // convert the description word to lower
-                                desWords[i] = desWords[i].ToLower();
-
-                                // Program to skip the words if the word are in stop words array
-                                if (stopWord.Contains(desWords[i])) continue;
-
-                                // Program to skip the words if the word does not match searchWord
-                                if (searchWord != "") if (!(desWords[i].IndexOf(searchWord) >= 0)) continue;
-
-                                // Program to parse through the sorted list of description words and write when the words change with count.
-                                if (desWords[i] == newDesWord)
-                                    newDesWordCnt++;
-                                else
-                                {
-                                    // Program to insert the record in the detail table
-                                    // sw.WriteLine(IncidentId + ',' + IncidentSource + ',' + desWords[i] + ',' + newDesWordCnt.ToString());
-                                    // TODO
-                                    mySqlStm = "insert into [" + tbDetTable.Text
-                                        + "] values('" + IncidentId
-                                        + "','" + IncidentSource
-                                        + "','" + desWords[i]
-                                        + "'," + newDesWordCnt.ToString()
-                                        + ");";
-
-                                    using (SqlCommand command2 = new SqlCommand(mySqlStm, conn))
-                                    {
-                                            command2.ExecuteNonQuery();
-                                    }
-
-                                    newDesWord = desWords[i];
-                                    newDesWordCnt = 1;
-                                    // Incrementing the output file record counter by 1
-                                    tbOutputRecords.Text = mCurrentDetailRec.ToString();
-                                    tbOutputRecords.Update();
-                                    mCurrentDetailRec++;
-
-                                }
-                            }
-
-                            // Incrementing the input file record counter by 1
-                            setSystemMessage("Record: " + mCurrentRecord.ToString() + " Word Count Processed...");
-                            progressBar.Value = mCurrentRecord;
-                            tbCurrRecord.Text = mCurrentRecord.ToString();
-                            tbCurrRecord.Update();
-                            mCurrentRecord++;
-
-                        }
-                    } // Closing of SQL Data Reader reader
-
-                    //-------------------------------------------
-                    //--- 03 Program to create the summary table.
-                    //-------------------------------------------
-                    try
-                    {
-                        // mySqlStm = "create table [" + tbSumTable.Text + "] (Word char(50), Incidents int);";
-                        mySqlStm = "select Word, IncidentSource, count(*) as [IncidentCount] ";
-                        mySqlStm += "into [" + tbSumTable.Text + "] ";
-                        mySqlStm += "from [" + tbDetTable.Text + "] ";
-                        mySqlStm += "group by Word, IncidentSource ";
-                        mySqlStm += "order by IncidentCount Desc";
-
-                        using (SqlCommand command2 = new SqlCommand(mySqlStm, conn))
-                        {
-                            command2.ExecuteNonQuery();
-                        }
-                        setSystemMessage("Created Summary table!" + tbSumTable);
-                    }
-                    catch (SqlException)
-                    {
-                        setSystemMessage("SQL Exception Could not create Summary table!" + tbSumTable);
-                    }
-
-                    setSystemMessage("Done!");
-
-                }
-            }  // Closing of SQL Connection conn
-        } // Closing of btnProcess_Click procedure
-
-        private void tbDBSource_TextChanged(object sender, EventArgs e)
-        {
-            makeConnString();
-        }
-
-        private void loadCSV_Click(object sender, EventArgs e)
-        {
-            using (StreamReader sr = new StreamReader("C:\\Users\\sisumank\\Documents\\Share_Mothi\\apr16_pipe.csv"))
-            {
-                using (SqlConnection conn = new SqlConnection())
-                {
-                    myConStr = "Data Source=SISUMANK1\\SUMANDB" ;
-                    myConStr += ";Initial Catalog=test" ;
-                    myConStr += ";User id=sa" ;
-                    myConStr += ";Password=S1u2m3a4n5" ;
-                    myConStr += ";MultipleActiveResultSets=true";
-
-                    conn.ConnectionString = myConStr;
-                    conn.Open();
-                    int mrowcount=0;
-                    setSystemMessage("Start :"+mrowcount.ToString());
-                    while (sr.Peek()>0)
-                    {
-                        string mline = sr.ReadLine();
-
-                        if(mrowcount>=60000)
-                        {
-                            string[] mfields = mline.Split('|');
-                            mySqlStm = "insert into input values('";
-                            mySqlStm += mfields[0].Replace("\'", " ").Replace("\"", " ") + "','";
-                            mySqlStm += mfields[1].Replace("\'", " ").Replace("\"", " ") + "','";
-                            mySqlStm += mfields[2].Replace("\'", " ").Replace("\"", " ") + "','";
-                            mySqlStm += mfields[3].Replace("\'", " ").Replace("\"", " ") + "','";
-                            mySqlStm += mfields[4].Replace("\'", " ").Replace("\"", " ") + "','";
-                            mySqlStm += mfields[5].Replace("\'", " ").Replace("\"", " ") + "')";
-                            using (SqlCommand command = new SqlCommand(mySqlStm, conn))
-                            {
-                                command.ExecuteNonQuery();
-                            }
-                        }
-                        setSystemMessage("Inserted :" + mrowcount.ToString());
-                        if (mrowcount == 100000) break;
-                        mrowcount++;
-                    }  // while loop ends
-                    setSystemMessage("End :" + mrowcount.ToString());
-                }  // sql connection end
-            } // stream reader end
-        }  //load csv end 
     } // Closing of Partial Class Form
 }// Closing of namespace TAA1

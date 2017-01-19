@@ -117,34 +117,4 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-  <metadata name="ofdStopWords.TrayLocation" type="System.Drawing.Point, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
-    <value>17, 17</value>
-  </metadata>
-  <metadata name="$this.TrayHeight" type="System.Int32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089">
-    <value>46</value>
-  </metadata>
-  <assembly alias="System.Drawing" name="System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
-  <data name="$this.Icon" type="System.Drawing.Icon, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
-    <value>
-        AAABAAEA4eEAAAEACAAxBAAAFgAAAIlQTkcNChoKAAAADUlIRFIAAADhAAAA4QgGAAAAPrPSegAAA/hJ
-        REFUeJzt3TGOG2UYgOF/x94VxARFiCJFkKCnzEEQBUdB4gRInIKagjvQr6ChDwiKSBCQyDpCu7aHjooN
-        Qgr7jp3nucD32ZpXM+ORPGfzPM8DyEz1AvC6EyHERAgxEUJMhBATIcRECDERQkyEEBMhxEQIMRFCTIQQ
-        EyHERAgxEUJMhBATIcRECDERQkyEEBMhxEQIMRFCTIQQEyHERAgxEUJMhBATIcRECDERQkyEEBMhxEQI
-        MRFCTIQQEyHERAgxEUJMhBATIcRECDERQkyEEBMhxEQIMRFCbF0v8H/Y7/fjcDiMMcaYpmmsVqt4I7jd
-        yUW43+/H9fX12G63Y4wxNpvNuLi4ECKLdXKXo4fDYWy327Hb7cZutxvb7fbvsyIs0clFCMfm5CKcpmls
-        NpuxXq/Her0em81mTNPJfUxOyNk8z3O9xKvmhxmOyUlGCMfEdRrERAgxEUJMhBATIcRECDERQkyEEBMh
-        xEQIMRFCTIQQEyHERAgxEUJMhBATIcRECDERQkyEEBMhxEQIMRFCTIQQEyHERAgxEUJMhBATIcRECDER
-        QkyEEFsXQ3/986oYC//q3TfeuvOZyZt6z776dIzze3c9Fl7u5sWYP/nizscmZ8Jxfm88PH8zGQ23eRrN
-        dU8IMRFCTIQQEyHERAgxEUJMhBBrnhP+B8/nQ70CR+7+2bLPNYuN8On+Znz2/uPx8XsfjpvDvl6HI3U+
-        rcbXP30/Pv/hcjxcndfr/KPFRjjGGB9sHozH7zyq1+DIfffbz/UKL7Xs8zS8BkQIMRFCTIQQEyHERAgx
-        EUJMhBATIcRECDERQkyEEBMhxEQIMRFCTIQQEyHERAgxEUJMhBATIcRECDERQkyEEFt0hOfTov+bmCOx
-        9ONosdttptX48sdvxze/PKlX4cg9efH72Eyreo1bLTbC+2fTuLx6Ni6vntWrcAKW/FKYxUY4xrK/OHhV
-        HOUQEyHERAgxEUJMhBATIcSyRxTP50M1GhYlifCjB4/G2+uLYjTc6o/ddTL3bJ7nOZkMjDHcE0JOhBAT
-        IcRECDERQkyEEBMhxEQIMRFCTIQQEyHERAgxEUJMhBATIcRECDERQkyEEBMhxEQIMRFCTIQQEyHERAgx
-        EUJMhBATIcRECDERQkyEEBMhxEQIMRFCTIQQEyHERAgxEUJMhBATIcRECDERQkyEEBMhxEQIMRFCTIQQ
-        EyHERAgxEUJMhBATIcRECDERQkyEEBMhxEQIMRFCTIQQEyHERAgxEUJMhBATIcRECDERQkyEEBMhxEQI
-        MRFCTIQQEyHERAgxEUJMhBATIcRECDERQkyEEBMhxEQIMRFCTIQQEyHERAgxEUJMhBATIcT+Ai7Fa+gF
-        uI4LAAAAAElFTkSuQmCC
-</value>
-  </data>
 </root>

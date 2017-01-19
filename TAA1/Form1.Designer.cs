@@ -84,6 +84,8 @@
             this.tbOutputRecords = new System.Windows.Forms.TextBox();
             this.tbCurrRecord = new System.Windows.Forms.TextBox();
             this.loadCSV = new System.Windows.Forms.Button();
+            this.lblMessage2 = new System.Windows.Forms.Label();
+            this.button1 = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.pbHPELogo)).BeginInit();
             this.gbDatabaseConnection.SuspendLayout();
             this.gbTableSelection.SuspendLayout();
@@ -189,7 +191,7 @@
             this.tbDBPassword.Name = "tbDBPassword";
             this.tbDBPassword.PasswordChar = '#';
             this.tbDBPassword.Size = new System.Drawing.Size(173, 20);
-            this.tbDBPassword.TabIndex = 46;
+            this.tbDBPassword.TabIndex = 44;
             // 
             // lbDBPassword
             // 
@@ -198,7 +200,7 @@
             this.lbDBPassword.Location = new System.Drawing.Point(16, 131);
             this.lbDBPassword.Name = "lbDBPassword";
             this.lbDBPassword.Size = new System.Drawing.Size(68, 16);
-            this.lbDBPassword.TabIndex = 45;
+            this.lbDBPassword.TabIndex = 43;
             this.lbDBPassword.Text = "Password";
             // 
             // tbDBUsername
@@ -206,7 +208,7 @@
             this.tbDBUsername.Location = new System.Drawing.Point(114, 100);
             this.tbDBUsername.Name = "tbDBUsername";
             this.tbDBUsername.Size = new System.Drawing.Size(173, 20);
-            this.tbDBUsername.TabIndex = 44;
+            this.tbDBUsername.TabIndex = 42;
             // 
             // lbDBUsername
             // 
@@ -215,7 +217,7 @@
             this.lbDBUsername.Location = new System.Drawing.Point(16, 98);
             this.lbDBUsername.Name = "lbDBUsername";
             this.lbDBUsername.Size = new System.Drawing.Size(77, 16);
-            this.lbDBUsername.TabIndex = 43;
+            this.lbDBUsername.TabIndex = 41;
             this.lbDBUsername.Text = "User Name";
             // 
             // lblConnState
@@ -225,7 +227,7 @@
             this.lblConnState.Location = new System.Drawing.Point(137, 181);
             this.lblConnState.Name = "lblConnState";
             this.lblConnState.Size = new System.Drawing.Size(109, 16);
-            this.lblConnState.TabIndex = 42;
+            this.lblConnState.TabIndex = 46;
             this.lblConnState.Text = "Connection State";
             // 
             // btnDBConnect
@@ -234,7 +236,7 @@
             this.btnDBConnect.Location = new System.Drawing.Point(23, 176);
             this.btnDBConnect.Name = "btnDBConnect";
             this.btnDBConnect.Size = new System.Drawing.Size(96, 30);
-            this.btnDBConnect.TabIndex = 41;
+            this.btnDBConnect.TabIndex = 45;
             this.btnDBConnect.Text = "Connect";
             this.btnDBConnect.UseVisualStyleBackColor = true;
             this.btnDBConnect.Click += new System.EventHandler(this.btnDBConnect_Click);
@@ -354,7 +356,7 @@
             this.lblInputTable.Location = new System.Drawing.Point(6, 27);
             this.lblInputTable.Name = "lblInputTable";
             this.lblInputTable.Size = new System.Drawing.Size(85, 16);
-            this.lblInputTable.TabIndex = 18;
+            this.lblInputTable.TabIndex = 47;
             this.lblInputTable.Text = "Select Table";
             // 
             // cmbInputTable
@@ -363,7 +365,7 @@
             this.cmbInputTable.Location = new System.Drawing.Point(114, 27);
             this.cmbInputTable.Name = "cmbInputTable";
             this.cmbInputTable.Size = new System.Drawing.Size(173, 21);
-            this.cmbInputTable.TabIndex = 17;
+            this.cmbInputTable.TabIndex = 48;
             this.cmbInputTable.SelectedIndexChanged += new System.EventHandler(this.cmbInputTable_SelectedIndexChanged);
             // 
             // gbFieldSelection
@@ -603,10 +605,10 @@
             // 
             // msgBox2
             // 
-            this.msgBox2.Location = new System.Drawing.Point(18, 563);
+            this.msgBox2.Location = new System.Drawing.Point(98, 563);
             this.msgBox2.Name = "msgBox2";
             this.msgBox2.ReadOnly = true;
-            this.msgBox2.Size = new System.Drawing.Size(886, 20);
+            this.msgBox2.Size = new System.Drawing.Size(806, 20);
             this.msgBox2.TabIndex = 47;
             // 
             // tbInputRecords
@@ -643,11 +645,33 @@
             this.loadCSV.UseVisualStyleBackColor = true;
             this.loadCSV.Click += new System.EventHandler(this.loadCSV_Click);
             // 
+            // lblMessage2
+            // 
+            this.lblMessage2.AutoSize = true;
+            this.lblMessage2.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.lblMessage2.Location = new System.Drawing.Point(18, 567);
+            this.lblMessage2.Name = "lblMessage2";
+            this.lblMessage2.Size = new System.Drawing.Size(75, 16);
+            this.lblMessage2.TabIndex = 54;
+            this.lblMessage2.Text = "Messages:";
+            // 
+            // button1
+            // 
+            this.button1.Location = new System.Drawing.Point(562, 19);
+            this.button1.Name = "button1";
+            this.button1.Size = new System.Drawing.Size(171, 23);
+            this.button1.TabIndex = 55;
+            this.button1.Text = "Show Summary Table";
+            this.button1.UseVisualStyleBackColor = true;
+            this.button1.Click += new System.EventHandler(this.button1_Click);
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(923, 684);
+            this.ClientSize = new System.Drawing.Size(923, 601);
+            this.Controls.Add(this.button1);
+            this.Controls.Add(this.lblMessage2);
             this.Controls.Add(this.loadCSV);
             this.Controls.Add(this.tbCurrRecord);
             this.Controls.Add(this.tbOutputRecords);
@@ -736,6 +760,8 @@
         private System.Windows.Forms.TextBox tbCurrRecord;
         private System.Windows.Forms.Button btnDropTables;
         private System.Windows.Forms.Button loadCSV;
+        private System.Windows.Forms.Label lblMessage2;
+        private System.Windows.Forms.Button button1;
     }
 }
 
